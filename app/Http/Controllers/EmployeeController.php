@@ -13,7 +13,7 @@ class EmployeeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         // フォームからのデータ取得方法を記述
         //!== null 空欄でない場合

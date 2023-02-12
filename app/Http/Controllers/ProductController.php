@@ -15,7 +15,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        // フォームからのデータ取得方法を記述
+        // カテゴリーの絞り込み
         //!== null 空欄でない場合
         if ($request->category !== null) {
             // where句とpaginateを実装。
@@ -25,7 +25,7 @@ class ProductController extends Controller
             $products = Product::where('category_id', $request->category)->paginate(15);
             //count()で商品数を表示
             $total_count = Product::where('category_id', $request->category)->count();
-            //find関数は、列（row,レコード）ごとデータを引き出す
+            //find関数は、行（row,レコード）ごとデータを引き出す
             $category = Category::find($request->category);
         } else {
             $products = Product::paginate(15);
@@ -35,17 +35,32 @@ class ProductController extends Controller
 
         // Categoryモデルにより、categoriesテーブルの全データを取得
        $categories = Category::all();
-    // pluck('該当カラム')＝該当カラムの全てのフィールドデータを取得
-    // unique()は重複分を除去してデータ取得してくれる
-    // ここでmajor_category_namesカラムを取得し、indexビューにお届けしている
-       $major_category_names = Category::pluck('major_category_name')->unique();
 
-       $aldescriptions = Category::all()->unique(function ($item) {
-        return $item['major_category_name'].$item['description'];
-    });
+        // pluck('該当カラム')＝該当カラムの全てのフィールドデータを取得
+        // unique()は重複分を除去してデータ取得してくれる
+        // ここでmajor_category_namesカラムを取得し、indexビューにお届けしている
+       $major_category_names = Category::pluck('major_category_name')->unique();
+       $所属支社s = Category::pluck('所属支社')->unique();
+
+       $所属支社_部署s = Category::all()->unique(function ($item) {
+        return $item['所属支社'].$item['所属部署'];
+        });
+
+        // 検索機能
+        // keywordというパラメータがあれば
+        if($request->keyword !== null){
+            $results = Category::where('氏名','like', '%{{$request->keyword}}%')->get();
+        }else{
+            $results = Category::all();
+        }
+
+        //フォームを機能させるために各情報を取得し、viewに返す
+        // $categories = Category::all();
+        $searchWord = $request->input('searchWord');
+        $categoryId = $request->input('categoryId');
 
     //    products.indexを表示するときに、compactにて指定のデータ群を持っていく。
-       return view('products.index', compact('products', 'category', 'categories', 'major_category_names', 'total_count','aldescriptions'));
+       return view('products.index', compact('products', 'category', 'categories', 'major_category_names', 'total_count','所属支社s','所属支社_部署s','searchWord','categoryId','results'));
 
     }
 
@@ -77,6 +92,42 @@ class ProductController extends Controller
         $product->save();
 
         return to_route('products.index');
+
+
+        //入力される値nameの中身を定義する
+        $searchWord = $request->input('searchWord'); //商品名の値
+        $categoryId = $request->input('categoryId'); //カテゴリの値
+
+        $query = Product::query();
+        //商品名が入力された場合(isset)、m_productsテーブルから一致する商品を$queryに代入
+        if (isset($searchWord)) {
+            $query->where('product_name', 'like', '%' . self::escapeLike($searchWord) . '%');
+        }
+        //カテゴリが選択された場合、m_categoriesテーブルからcategory_idが一致する商品を$queryに代入
+        if (isset($categoryId)) {
+
+            $query->where('category_id', $categoryId);
+        }
+
+        //$queryをcategory_idの昇順に並び替えて$productsに代入
+        $products = $query->orderBy('category_id', 'asc')->paginate(15);
+
+        //m_categoriesテーブルからgetLists();関数でcategory_nameとidを取得する
+        $category = new MCategory;
+        $categories = $category->getLists();
+
+        return view('searchproduct', [
+            'products' => $products,
+            'categories' => $categories,
+            'searchWord' => $searchWord,
+            'categoryId' => $categoryId,
+        ]);
+
+        // //「\\」「%」「_」などの記号を文字としてエスケープさせる
+        // public static function escapeLike($str)
+        // {
+        //     return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $str);
+        // }
     }
 
     /**

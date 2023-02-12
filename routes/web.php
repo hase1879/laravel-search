@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\EmployeeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,4 +32,4 @@ Route::resource('tests',TestController::class);
 Route::resource('products', ProductController::class);
 
 //社員リスト
-Route::resource('Employees', EmployeeController::class);
+Route::resource('employees', EmployeeController::class);
